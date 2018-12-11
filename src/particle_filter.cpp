@@ -18,14 +18,14 @@
 #include "particle_filter.h"
 
 using namespace std;
+static default_random_engine random_engine;
 
 void ParticleFilter::init(double x, double y, double theta, double std[]) {
-    num_particles = 1000;
+    num_particles = 90;
     
     normal_distribution<double> x_distribution(x, std[0]);
     normal_distribution<double> y_distribution(y, std[1]);
     normal_distribution<double> theta_distribution(theta, std[2]);
-    default_random_engine random_engine;
 
     // Initialize each particle.
     for (int id = 0; id < num_particles; ++id) {
@@ -46,15 +46,21 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
     for (int i = 0; i < num_particles; ++i) {
         double theta = particles[i].theta;
-        particles[i].x += (velocity / yaw_rate) * (sin(theta + yaw_rate * delta_t) - sin(theta));
-        particles[i].y += (velocity / yaw_rate) * (cos(theta) - cos(theta + yaw_rate * delta_t));
+
+        if (fabs(yaw_rate) < 0.001) {
+            particles[i].x += velocity * delta_t * cos(theta);
+            particles[i].y += velocity * delta_t * sin(theta);
+        }
+        else {
+            particles[i].x += (velocity / yaw_rate) * (sin(theta + yaw_rate * delta_t) - sin(theta));
+            particles[i].y += (velocity / yaw_rate) * (cos(theta) - cos(theta + yaw_rate * delta_t));
+        }
+
         particles[i].theta += yaw_rate * delta_t;
 
         normal_distribution<double> x_distribution(particles[i].x, std_pos[0]);
         normal_distribution<double> y_distribution(particles[i].y, std_pos[1]);
         normal_distribution<double> theta_distribution(particles[i].theta, std_pos[2]);
-        random_device r;
-        default_random_engine random_engine(r());
     
         particles[i].y = y_distribution(random_engine);
         particles[i].x = x_distribution(random_engine);
